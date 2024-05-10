@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"time"
@@ -29,4 +30,39 @@ func GenerateSignedString(userId int64, username string) (string, error) {
 	})
 
 	return token.SignedString(getJWTSecret())
+}
+
+func ValidateToken(signedToken string) (err error) {
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		&MyJWTClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected signing method")
+			}
+			return getJWTSecret(), nil
+		},
+	)
+
+	if err != nil {
+		v, _ := err.(*jwt.ValidationError)
+		switch v.Errors {
+		case jwt.ValidationErrorSignatureInvalid:
+			err = errors.New("signature validation failed")
+			return
+		case jwt.ValidationErrorExpired:
+			err = errors.New("token is expired")
+			return
+		default:
+			err = errors.New("token is invalid")
+			return
+		}
+	}
+
+	if !token.Valid {
+		err = errors.New("unauthorized")
+		return
+	}
+
+	return
 }
