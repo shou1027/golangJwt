@@ -22,7 +22,7 @@ type useCase struct {
 }
 
 func NewUseCase(userRepo repository.Repository) UseCase {
-	return &UseCase{
+	return &useCase{
 		repository: userRepo,
 		timeout:    time.Duration(2) * time.Second,
 	}
@@ -59,4 +59,29 @@ func (uc *useCase) Signup(c context.Context, username, email, password string) (
 	}
 
 	return user, nil
+}
+
+func (uc *useCase) Login(c context.Context, email, password string) (string, *model.User, error) {
+	ctx, cancel := context.WithTimeout(c, uc.timeout)
+	defer cancel()
+
+	user, err := uc.repository.GetUserByEmail(ctx, email)
+	if err != nil {
+		return "", nil, &myerror.InternalServerError{Err: err}
+	}
+	if user.ID == 0 {
+		return "", nil, &myerror.BadRequestError{Err: errors.New("user is not exist")}
+	}
+
+	err = util.CheckPassword(user.Password, password)
+	if err != nil {
+		return "", nil, &myerror.BadRequestError{Err: errors.New("password is incorrect")}
+	}
+
+	signedString, err := util.GenerateSignedString(user.ID, user.Username)
+	if err != nil {
+		return "", nil, &myerror.InternalServerError{Err: err}
+	}
+
+	return signedString, user, nil
 }
