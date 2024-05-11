@@ -10,7 +10,7 @@ import (
 
 type Handler interface {
 	HandleSignup(c *gin.Context)
-	HandleLogout(c *gin.Context)
+	HandleLogin(c *gin.Context)
 	HandleLogout(c *gin.Context)
 }
 
@@ -18,7 +18,7 @@ type handler struct {
 	useCase usecase.UseCase
 }
 
-func NewHandler(userUseCase usecase.UseCase) handler {
+func NewHandler(userUseCase usecase.UseCase) Handler {
 	return &handler{
 		useCase: userUseCase,
 	}
